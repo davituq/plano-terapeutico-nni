@@ -752,5 +752,31 @@ button:disabled { cursor: not-allowed; opacity: .46; }
     box-shadow: none;
     break-after: page;
   }
+  /* Use print units so the PDF stays legible regardless of browser viewport. */
+  .doc-header span, .doc-hero > span, .doc-section-label { font-size: 8pt; }
+  .doc-header strong { font-size: 10pt; }
+  .doc-hero h2 { font-size: 21pt; }
+  .doc-identity small { font-size: 7.5pt; }
+  .doc-identity strong { font-size: 9.5pt; }
+  .doc-lead { font-size: 10.5pt; }
+  .doc-treatment small { font-size: 7.5pt; }
+  .doc-treatment h3 { font-size: 14pt; }
+  .doc-treatment p { font-size: 9.5pt; }
+  .doc-conduct { font-size: 8.5pt; }
+  .doc-goal-grid span { font-size: 7.5pt; }
+  .doc-goal-grid strong { font-size: 9.5pt; }
+  .doc-next small, .doc-return small { font-size: 7.5pt; }
+  .doc-next strong, .doc-return strong { font-size: 10.5pt; }
+  .doc-next span, .doc-return span { font-size: 8.5pt; }
+  .doc-footer { font-size: 7.5pt; }
+  .doc-timeline-number { font-size: 8pt; }
+  .doc-timeline-item small { font-size: 7.5pt; }
+  .doc-timeline-item strong { font-size: 10pt; }
+  .doc-timeline-item p { font-size: 8.5pt; }
+  .doc-timeline-item em { font-size: 7.5pt; }
+  .doc-two-columns ul, .doc-safety p { font-size: 8.5pt; }
+  .doc-safety small { font-size: 7.5pt; }
+  .doc-signature span { font-size: 7pt; }
+  .doc-signature strong { font-size: 9pt; }
   .a4-page:last-child { break-after: auto; }
 }
