@@ -1,6 +1,6 @@
 # Gerador de Plano Terapêutico NNI
 
-Aplicação institucional do Núcleo de Neuroimunologia para estruturar o plano de cuidado dos próximos seis meses e gerar um documento visual para o paciente.
+Aplicação institucional do Núcleo de Neuroimunologia para estruturar o plano de cuidado dos próximos meses e gerar um documento visual para o paciente.
 
 ## Privacidade
 

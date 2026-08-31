@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 const STEPS = [
   ["01", "Identificação", "Ciclo e responsável"],
   ["02", "Plano de cuidado", "Tratamento e prioridades"],
-  ["03", "Agenda de 6 meses", "Exames e ações"],
+  ["03", "Próximos meses", "Exames e ações"],
   ["04", "Revisão", "Conferência médica"],
   ["05", "PDF", "Documento do paciente"],
 ] as const;
 
-const STEP_TITLES = ["Novo plano", "Plano de cuidado", "Agenda de 6 meses", "Revisão médica", "Documento do paciente"];
+const STEP_TITLES = ["Novo plano", "Plano de cuidado", "Ações dos próximos meses", "Revisão médica", "Documento do paciente"];
 const CONDUCTS = ["Manter", "Iniciar", "Ajustar", "Substituir", "Suspender", "Em decisão"];
 const GOALS = [
   "Manter o controle do quadro",
@@ -21,8 +21,9 @@ const GOALS = [
   "Planejamento familiar",
   "Manter atividade física",
   "Otimizar reabilitação",
+  "Outro",
 ];
-const SYMPTOMS = ["Fadiga", "Dor", "Sono", "Mobilidade", "Cognição", "Humor"];
+const FOLLOW_UP_OPTIONS = ["4 meses", "6 meses", "Menos de 4 meses", "Outro período"];
 
 type PlanAction = {
   id: number;
@@ -40,15 +41,6 @@ function displayDate(value: string) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
     .format(new Date(`${value}T12:00:00`))
-    .replaceAll(" de ", " ");
-}
-
-function addSixMonths(value: string) {
-  if (!value) return "";
-  const date = new Date(`${value}T12:00:00`);
-  date.setMonth(date.getMonth() + 6);
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
-    .format(date)
     .replaceAll(" de ", " ");
 }
 
@@ -83,12 +75,14 @@ export default function Home() {
   const [initials, setInitials] = useState("");
   const [consultationDate, setConsultationDate] = useState("");
   const [doctor, setDoctor] = useState("");
+  const [followUpInterval, setFollowUpInterval] = useState("6 meses");
+  const [followUpOther, setFollowUpOther] = useState("");
   const [treatment, setTreatment] = useState("");
   const [regimen, setRegimen] = useState("");
   const [conduct, setConduct] = useState("Manter");
   const [summary, setSummary] = useState("");
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [customGoal, setCustomGoal] = useState("");
   const [actions, setActions] = useState<PlanAction[]>(INITIAL_ACTIONS);
   const [showNewAction, setShowNewAction] = useState(false);
   const [newActionTitle, setNewActionTitle] = useState("");
@@ -96,9 +90,12 @@ export default function Home() {
   const [returnDate, setReturnDate] = useState("");
   const [approved, setApproved] = useState(false);
 
-  const cycleEnd = useMemo(() => addSixMonths(consultationDate), [consultationDate]);
   const cleanInitials = initials.replace(/[^A-Z]/g, "") || "NNI";
   const planCode = `NNI-${consultationDate.slice(0, 7).replace("-", "")}-${cleanInitials}`;
+  const followUpLabel = followUpInterval === "Outro período"
+    ? followUpOther.trim() || "Outro período a definir"
+    : followUpInterval;
+  const displayedGoals = selectedGoals.map((goal) => goal === "Outro" ? customGoal.trim() || "Outra prioridade" : goal);
 
   function toggleValue(value: string, values: string[], setter: (next: string[]) => void, limit?: number) {
     if (values.includes(value)) setter(values.filter((item) => item !== value));
@@ -131,10 +128,11 @@ export default function Home() {
       <div className="preview-paper">
         <img src="nni-logo.png" alt="" />
         <span className="preview-kicker">Seu plano de cuidado</span>
-        <h3>Próximos 6 meses</h3>
+        <h3>Próximos meses</h3>
         <div className="preview-identity">
           <div><small>Paciente</small><strong>{initials || "—"}</strong></div>
-          <div><small>Período</small><strong>{consultationDate ? `${displayDate(consultationDate)} — ${cycleEnd}` : "—"}</strong></div>
+          <div><small>Consulta</small><strong>{displayDate(consultationDate)}</strong></div>
+          <div><small>Retorno</small><strong>{followUpLabel}</strong></div>
         </div>
         {step === 1 ? (
           <div className="preview-placeholder"><span /><span /><span /></div>
@@ -145,7 +143,7 @@ export default function Home() {
             <small>Próxima etapa</small><strong>{actions[0]?.title || "A definir"}</strong>
           </div>
         )}
-        <div className="preview-footer"><span>NNI</span><span>Plano terapêutico de 6 meses</span></div>
+        <div className="preview-footer"><span>NNI</span><span>Plano terapêutico · próximos meses</span></div>
       </div>
       <p className="preview-caption">A prévia completa aparece na revisão. Nenhum dado é salvo durante o preenchimento.</p>
     </aside>
@@ -180,7 +178,7 @@ export default function Home() {
 
       <section className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">Plano terapêutico de 6 meses</span><h1>{STEP_TITLES[step - 1]}</h1></div>
+          <div><span className="eyebrow">Plano terapêutico · próximos meses</span><h1>{STEP_TITLES[step - 1]}</h1></div>
           <div className="session-status"><span className="status-dot" />Sessão temporária</div>
         </header>
 
@@ -193,10 +191,22 @@ export default function Home() {
                 <div className="form-card">
                   <div className="field-grid">
                     <label className="field"><span>Iniciais do paciente</span><input value={initials} maxLength={5} onChange={(event) => setInitials(event.target.value.toUpperCase())} /><small>Até 5 caracteres. Exemplo: D.Q.</small></label>
-                    <label className="field"><span>Data da consulta</span><input type="date" value={consultationDate} onChange={(event) => setConsultationDate(event.target.value)} /><small>Define automaticamente o ciclo de seis meses.</small></label>
+                    <label className="field"><span>Data da consulta</span><input type="date" value={consultationDate} onChange={(event) => setConsultationDate(event.target.value)} /><small>Data de início deste plano de cuidado.</small></label>
                     <label className="field field-wide"><span>Médico responsável</span><input value={doctor} onChange={(event) => setDoctor(event.target.value)} placeholder="Nome e especialidade" /><small>O registro profissional será associado na versão de produção.</small></label>
+                    <div className="field field-wide">
+                      <span>Em quanto tempo recomendamos a próxima consulta?</span>
+                      <div className="choice-row" role="group" aria-label="Previsão para a próxima consulta">
+                        {FOLLOW_UP_OPTIONS.map((option) => (
+                          <button key={option} type="button" className={`choice-pill ${followUpInterval === option ? "selected" : ""}`} onClick={() => setFollowUpInterval(option)}>{option}</button>
+                        ))}
+                      </div>
+                      {followUpInterval === "Outro período" && (
+                        <input value={followUpOther} onChange={(event) => setFollowUpOther(event.target.value)} placeholder="Ex.: 2 meses, 3 meses ou conforme resultado dos exames" />
+                      )}
+                      <small>Use “Outro período” para intervalos menores ou situações individualizadas.</small>
+                    </div>
                   </div>
-                  <div className="cycle-summary"><span className="cycle-symbol">↗</span><div><span>Período calculado</span><strong>{displayDate(consultationDate)} → {cycleEnd || "—"}</strong></div><span className="cycle-pill">6 meses</span></div>
+                  <div className="cycle-summary"><span className="cycle-symbol">↗</span><div><span>Planejamento do retorno</span><strong>Próxima consulta em {followUpLabel.toLowerCase()}</strong></div><span className="cycle-pill">{followUpLabel}</span></div>
                 </div>
                 <FormNavigation step={step} onBack={() => undefined} onNext={() => goTo(2)} nextLabel="Continuar para o plano de cuidado" />
               </>
@@ -216,18 +226,20 @@ export default function Home() {
                 </div>
 
                 <div className="form-card stack-card">
-                  <div className="card-title"><div><span className="card-kicker">Próximos 6 meses</span><h3>Prioridades do ciclo</h3></div><span className="count-chip">{selectedGoals.length}/4</span></div>
+                  <div className="card-title"><div><span className="card-kicker">Próximos meses</span><h3>Prioridades do ciclo</h3></div><span className="count-chip">{selectedGoals.length}/4</span></div>
                   <p className="helper-copy">Escolha até quatro prioridades. Elas aparecerão em destaque no documento do paciente.</p>
                   <div className="goal-grid">{GOALS.map((goal) => <button key={goal} type="button" className={`goal-option ${selectedGoals.includes(goal) ? "selected" : ""}`} onClick={() => toggleValue(goal, selectedGoals, setSelectedGoals, 4)}><span className="goal-check">{selectedGoals.includes(goal) ? "✓" : "+"}</span>{goal}</button>)}</div>
-                  <div className="subsection bordered"><span className="field-label">Sintomas a acompanhar</span><div className="choice-row">{SYMPTOMS.map((symptom) => <button key={symptom} type="button" className={`choice-pill ${selectedSymptoms.includes(symptom) ? "selected" : ""}`} onClick={() => toggleValue(symptom, selectedSymptoms, setSelectedSymptoms)}>{symptom}</button>)}</div></div>
+                  {selectedGoals.includes("Outro") && (
+                    <label className="field custom-goal-field"><span>Descreva a outra prioridade</span><input value={customGoal} onChange={(event) => setCustomGoal(event.target.value)} placeholder="Ex.: Retomar atividade profissional gradualmente" /></label>
+                  )}
                 </div>
-                <FormNavigation step={step} onBack={() => goTo(1)} onNext={() => goTo(3)} nextLabel="Organizar agenda de 6 meses" />
+                <FormNavigation step={step} onBack={() => goTo(1)} onNext={() => goTo(3)} nextLabel="Organizar ações dos próximos meses" />
               </>
             )}
 
             {step === 3 && (
               <>
-                <SectionHeading number="03" title="Agenda dos próximos 6 meses" description="Cada ação precisa responder o que será feito, quando e quem dará o próximo passo." />
+                <SectionHeading number="03" title="Ações planejadas para os próximos meses" description="Cada ação precisa responder o que será feito, quando e quem dará o próximo passo." />
                 <div className="timeline-toolbar"><div><strong>{actions.length} ações planejadas</strong><span>Organizadas na ordem em que aparecerão para o paciente</span></div><button type="button" className="button-compact" onClick={() => setShowNewAction(!showNewAction)}>+ Adicionar ação</button></div>
                 {showNewAction && (
                   <div className="new-action-card">
@@ -267,9 +279,9 @@ export default function Home() {
                     {[
                       ["Identificação mínima", `${initials} · ${planCode}`],
                       ["Tratamento definido", `${conduct} ${treatment}`],
-                      ["Prioridades selecionadas", `${selectedGoals.length} objetivos`],
+                      ["Prioridades selecionadas", `${displayedGoals.length} objetivos`],
                       ["Agenda estruturada", `${actions.length} ações`],
-                      ["Retorno previsto", displayDate(returnDate)],
+                      ["Retorno previsto", returnDate ? displayDate(returnDate) : followUpLabel],
                       ["Privacidade", "Sem nome completo ou prontuário"],
                     ].map(([label, value]) => <div className="review-line" key={label}><span className="review-check">✓</span><div><strong>{label}</strong><small>{value}</small></div></div>)}
                   </div>
@@ -288,25 +300,27 @@ export default function Home() {
                 <div className="document-toolbar"><div><span className="eyebrow">Prévia final</span><h2>Documento do paciente</h2><p>Revise as duas páginas antes de gerar o PDF.</p></div><div><button className="button-secondary" type="button" onClick={() => goTo(4)}>Voltar à revisão</button><button className="button-primary" type="button" onClick={() => window.print()}>Gerar PDF <span>↓</span></button></div></div>
                 <div className="document-preview">
                   <article className="a4-page page-one">
-                    <div className="doc-header"><img src="nni-logo.png" alt="Núcleo de Neuroimunologia" /><div><span>Plano terapêutico</span><strong>Próximos 6 meses</strong></div></div>
-                    <div className="doc-hero"><span>Seu plano de cuidado</span><h2>Clareza sobre o que acontece agora e o que vem depois.</h2></div>
-                    <div className="doc-identity"><div><small>Paciente</small><strong>{initials}</strong></div><div><small>Período</small><strong>{displayDate(consultationDate)} — {cycleEnd}</strong></div><div><small>Código</small><strong>{planCode}</strong></div></div>
+                    <div className="doc-color-band" aria-hidden="true"><span /><span /><span /></div>
+                    <div className="doc-header"><img src="nni-logo.png" alt="Núcleo de Neuroimunologia" /><div><span>Plano terapêutico</span><strong>Próximos meses</strong></div></div>
+                    <div className="doc-hero"><span>Seu plano de cuidado</span><h2>Clareza sobre o que acontece agora e o que vem depois.</h2><p>Um roteiro simples para acompanhar tratamento, prioridades e próximos passos.</p></div>
+                    <div className="doc-identity"><div><small>Paciente</small><strong>{initials}</strong></div><div><small>Consulta</small><strong>{displayDate(consultationDate)}</strong></div><div><small>Próximo retorno</small><strong>{returnDate ? displayDate(returnDate) : followUpLabel}</strong></div><div><small>Código</small><strong>{planCode}</strong></div></div>
                     <section className="doc-section"><span className="doc-section-label">Onde estamos agora</span><p className="doc-lead">{summary}</p></section>
                     <section className="doc-treatment"><div><small>Seu tratamento hoje</small><h3>{treatment}</h3><p>{regimen}</p></div><span className="doc-conduct">{conduct}</span></section>
-                    <section className="doc-section"><span className="doc-section-label">Prioridades deste ciclo</span><div className="doc-goal-grid">{selectedGoals.map((goal, index) => <div key={goal}><span>0{index + 1}</span><strong>{goal}</strong></div>)}</div></section>
-                    <div className="doc-highlight-grid"><div className="doc-next"><small>Seu próximo passo</small><strong>{actions[0]?.title}</strong><span>{actions[0]?.month}</span></div><div className="doc-return"><small>Próxima consulta</small><strong>{displayDate(returnDate)}</strong><span>Revisar exames e evolução</span></div></div>
+                    <section className="doc-section"><span className="doc-section-label">O que vamos priorizar</span><div className="doc-goal-grid">{displayedGoals.map((goal, index) => <div key={`${goal}-${index}`}><span>0{index + 1}</span><strong>{goal}</strong></div>)}</div></section>
+                    <div className="doc-highlight-grid"><div className="doc-next"><small>Seu próximo passo</small><strong>{actions[0]?.title || "A definir com a equipe"}</strong><span>{actions[0]?.month || "Período a definir"}</span></div><div className="doc-return"><small>Próxima consulta</small><strong>{returnDate ? displayDate(returnDate) : followUpLabel}</strong><span>Revisar exames e evolução</span></div></div>
                     <div className="doc-footer"><span>Núcleo de Neuroimunologia</span><span>1 / 2</span></div>
                   </article>
 
                   <article className="a4-page page-two">
+                    <div className="doc-color-band" aria-hidden="true"><span /><span /><span /></div>
                     <div className="doc-header compact"><img src="nni-logo.png" alt="" /><div><span>{initials}</span><strong>Roteiro do seu cuidado</strong></div></div>
-                    <section className="doc-section"><span className="doc-section-label">Seu caminho nos próximos 6 meses</span><div className="doc-timeline">{actions.map((action, index) => <div className="doc-timeline-item" key={action.id}><span className="doc-timeline-number">{index + 1}</span><div><small>{action.month} · {action.category}</small><strong>{action.title}</strong><p>{action.purpose}</p><em>{action.owner} · {action.status}</em></div></div>)}<div className="doc-timeline-item return"><span className="doc-timeline-number">✓</span><div><small>{displayDate(returnDate)} · Consulta NNI</small><strong>Reavaliar e decidir os próximos passos</strong><p>Revisar exames, tratamento e evolução dos sintomas acompanhados.</p></div></div></div></section>
+                    <section className="doc-section"><span className="doc-section-label">Ações planejadas para os próximos meses</span><p className="doc-section-intro">Siga cada etapa no período indicado. Em caso de dúvida, leve este documento à próxima conversa com a equipe.</p><div className="doc-timeline">{actions.map((action, index) => <div className="doc-timeline-item" key={action.id}><span className="doc-timeline-number">{index + 1}</span><div><small>{action.month || "Período a definir"} · {action.category}</small><strong>{action.title}</strong><p>{action.purpose}</p><em>Responsável pelo próximo passo: {action.owner} · {action.status}</em></div></div>)}<div className="doc-timeline-item return"><span className="doc-timeline-number">✓</span><div><small>{returnDate ? displayDate(returnDate) : followUpLabel} · Consulta NNI</small><strong>Reavaliar e decidir os próximos passos</strong><p>Revisar exames, tratamento e evolução das prioridades do plano.</p></div></div></div></section>
                     <div className="doc-two-columns"><section><span className="doc-section-label">Cuidados durante todo o período</span><ul><li>Manter o tratamento conforme prescrito.</li><li>Registrar mudanças relevantes nos sintomas.</li>{selectedGoals.includes("Manter atividade física") && <li>Manter atividade física adaptada às orientações recebidas.</li>}{selectedGoals.includes("Organizar vacinação") && <li>Atualizar vacinação conforme orientação individual.</li>}{selectedGoals.includes("Planejamento familiar") && <li>Conversar com a equipe antes de decisões reprodutivas.</li>}</ul></section><section className="doc-safety"><span className="doc-section-label">Quando falar com a equipe</span><p>Entre em contato se perceber sintomas novos, piora persistente ou dificuldade para manter o tratamento.</p><small>Em situações graves ou de rápida progressão, procure um serviço de urgência.</small></section></div>
                     <div className="doc-signature"><div><span>Plano revisado por</span><strong>{doctor}</strong></div><div><span>Emitido em</span><strong>{displayDate(consultationDate)}</strong></div></div>
                     <div className="doc-footer"><span>Núcleo de Neuroimunologia</span><span>2 / 2</span></div>
                   </article>
                 </div>
-                <p className="prototype-note">Neste protótipo, “Gerar PDF” abre a impressão local do navegador. A versão final fará o download direto do arquivo.</p>
+                <p className="prototype-note">Ao clicar em “Gerar PDF”, escolha “Salvar como PDF” na janela de impressão do navegador.</p>
               </>
             )}
           </section>
